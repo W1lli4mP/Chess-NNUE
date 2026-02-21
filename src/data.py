@@ -20,7 +20,7 @@ def calculate_index(piece: chess.Piece, square: int) -> int:
     """
     return (not piece.color) * 64 * 6 + (piece.piece_type - 1) * 64 + square
 
-def extract_training_data():
+def extract_training_data() -> None:
     print("STARTING")
 
     global features_buffer, evals_buffer, shard_idx
@@ -148,7 +148,7 @@ def get_evaluation_from_board(engine: Stockfish, board: chess.Board) -> int | No
     else:
         return None
     
-def save_shard(total_positions=0):
+def save_shard(total_positions: int = 0) -> None:
     global features_buffer, evals_buffer, shard_idx
 
     if not features_buffer:
@@ -178,3 +178,51 @@ def save_shard(total_positions=0):
 # 1618957 positions evaluated
 # 100k games processed, 386 games skipped
 # 17 .npz shards created
+
+def sparse_to_dense_batch(sparse_features: np.ndarray) -> np.ndarray:
+    # converts (N, 32) sparse indices to (N, 768) dense binary vectors
+    n = sparse_features.shape[0]
+    dense = np.zeros((n, 768), dtype=np.float32)
+
+    for i in range(n):
+        for idx in sparse_features[i]:
+            if idx >= 0: # skip "-1" padding                
+                dense[i, idx] = 1.0
+    return dense
+
+def get_data(shard_indices: list[int] = None) -> tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
+    shard_dir = Path(here("data", "nnue_shards"))
+    all_shards = sorted(shard_dir.glob("shard_*.npz"))
+
+    shards = [all_shards[i] for i in shard_indices] if shard_indices is not None else all_shards
+
+    all_features = []
+    all_evals = []
+
+    for shard_path in shards:
+        data = np.load(shard_path)
+        all_features.append(data["features"])
+        all_evals.append(data["evals"])
+
+    # combine all shards
+    features = np.vstack(all_features) # (N, 32) sparse
+    evals = np.concatenate(all_evals) # (N,) centipawns
+
+    # convert sparse to dense
+    X = sparse_to_dense_batch(features)
+
+    # normalise evals to [-1.0, 1.0]
+    y = np.tanh(evals / 400).astype(np.float32)
+
+    # train/test split (90/10)
+    n = len(X)
+    split = int(n * 0.9)
+    perm = np.random.permutation(n)
+
+    train_X = X[perm[:split]]
+    train_y = y[perm[:split]]
+
+    test_X = X[perm[split:]]
+    test_y = y[perm[split:]]
+
+    return train_X, train_y, test_X, test_y
