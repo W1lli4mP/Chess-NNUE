@@ -3,7 +3,7 @@ MODEL_NAME = "prototype_8.npz"
 MODEL_RESULTS_NAME = "prototype_8.json"
 
 # hyperparameters for the neural network
-LAYER_DIMS = [786, 128, 1]
+LAYER_DIMS = [768, 128, 1]
 INPUT_UNITS = LAYER_DIMS[0]
 HIDDEN_UNITS = sum(LAYER_DIMS[1:-1])
 OUTPUT_UNITS = LAYER_DIMS[-1]
