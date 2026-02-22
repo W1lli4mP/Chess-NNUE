@@ -1,6 +1,6 @@
 # metadata
-MODEL_NAME = "prototype_8.npz"
-MODEL_RESULTS_NAME = "prototype_8.json"
+MODEL_NAME = "prototype_1.npz"
+MODEL_RESULTS_NAME = "prototype_1.json"
 
 # hyperparameters for the neural network
 LAYER_DIMS = [768, 128, 1]
@@ -8,7 +8,7 @@ INPUT_UNITS = LAYER_DIMS[0]
 HIDDEN_UNITS = sum(LAYER_DIMS[1:-1])
 OUTPUT_UNITS = LAYER_DIMS[-1]
 
-LEARNING_RATE = 0.01
+LEARNING_RATE = 0.001
 BATCH_SIZE = 64
 EPOCHS = 100
 L2_LAMBDA = 1e-4
