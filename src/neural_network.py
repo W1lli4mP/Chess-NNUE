@@ -8,6 +8,12 @@ def ReLU(z: np.ndarray) -> np.ndarray:
 def ReLU_derivative(z: np.ndarray) -> np.ndarray:
     return (z > 0).astype(float)
 
+def tanh(z: np.ndarray) -> np.ndarray:
+    return np.tanh(z)
+
+def tanh_derivative(z: np.ndarray) -> np.ndarray:
+    return 1 - tanh(z) ** 2
+
 # loss functions
 def mean_squared_error(y_hat: np.ndarray, y: np.ndarray) -> np.ndarray:
     return np.sum((y_hat - y) ** 2)
@@ -23,10 +29,10 @@ def hidden_activation_function_derivative(z: np.ndarray) -> np.ndarray:
     return ReLU_derivative(z)
 
 def output_activation_function(z: np.ndarray) -> np.ndarray:
-    return z
+    return tanh(z)
 
 def output_activation_function_derivative(z: np.ndarray) -> np.ndarray:
-    return # don't need it for linear (always 0)
+    return tanh_derivative(z)
 
 def loss_function(a: np.ndarray, y: np.ndarray) -> np.ndarray:
     return mean_squared_error(a, y)
@@ -210,9 +216,10 @@ class OutputLayer(Layer):
         return super().forward(x)
 
     def backward(self, a: np.ndarray, x: np.ndarray, y: np.ndarray, batch_size: int) -> np.ndarray:
-        ## compute delta (dLdz) (NOTE: HARDCODED FOR SOFTMAX + CROSS-ENTROPY)
-        # dLdz = dLda * dadz
-        delta = a - y
+        ## compute delta (dLdz) for MSE + tanh output
+        # dLdz = dLda * dadz = 2(a - y) * tanh(z)
+        z = self.get_preactivation(x)
+        delta = loss_function_derivative(a, y) * self.activation_function_derivative(z)
 
         ## calculate upstream gradient for previous layer (pre-gradient descent)
         # dLda_prev = dLda * dadz * W^T
