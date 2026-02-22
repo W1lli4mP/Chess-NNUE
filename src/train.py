@@ -1,7 +1,7 @@
 import numpy as np
 from neural_network import NeuralNetwork, loss_function
 from data import DataLoader, sparse_to_dense_batch
-from config import LEARNING_RATE, BATCH_SIZE, HIDDEN_UNITS, EPOCHS, MODEL_NAME
+from config import LEARNING_RATE, BATCH_SIZE, HIDDEN_UNITS, EPOCHS, MODEL_NAME, L2_LAMBDA, DROPOUT_RATE, MOMENTUM
 
 def train_epoch(neural_network: NeuralNetwork, train_loader: DataLoader) -> float:
     """
@@ -81,7 +81,10 @@ def get_results(training_history: list) -> dict:
             "learning_rate": LEARNING_RATE,
             "batch_size": BATCH_SIZE,
             "hidden_units": HIDDEN_UNITS,
-            "epochs_trained": EPOCHS
+            "epochs_trained": EPOCHS,
+            "l2_lambda": L2_LAMBDA,
+            "dropout_rate": DROPOUT_RATE,
+            "momentum": MOMENTUM
         },
         "training_history": training_history
     }
