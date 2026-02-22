@@ -43,6 +43,9 @@ def loss_function_derivative(a: np.ndarray, y: np.ndarray) -> np.ndarray:
 # neural network and layer classes
 class NeuralNetwork:
     def __init__(self, layer_dims: list[int], l2_lambda: float = 0.0, momentum: float = 0.9) -> None:
+        # encapsulate the NN's dimensions to each object
+        self.layer_dims = layer_dims
+
         # initialise lambda for calculating the total loss
         self.l2_lambda = l2_lambda
         
