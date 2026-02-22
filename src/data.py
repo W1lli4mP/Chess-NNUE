@@ -190,7 +190,35 @@ def sparse_to_dense_batch(sparse_features: np.ndarray) -> np.ndarray:
                 dense[i, idx] = 1.0
     return dense
 
+class DataLoader:
+    # memory efficient data loader that keeps data sparse until batch time
+
+    def __init__(self, sparse_features: np.ndarray, labels: np.ndarray, batch_size: int, shuffle: bool = True):
+        self.sparse_features = sparse_features # (N, 32) int16
+        self.labels = labels # (N,) float32
+        self.batch_size = batch_size
+        self.shuffle = shuffle
+        self.n = len(labels)
+        self.indices = np.arange(self.n)
+
+    def __len__(self):
+        return (self.n + self.batch_size - 1) // self.batch_size
+
+    def __iter__(self):
+        if self.shuffle:
+            np.random.shuffle(self.indices)
+
+        for start in range(0, self.n, self.batch_size):
+            batch_idx = self.indices[start:start + self.batch_size]
+            sparse_batch = self.sparse_features[batch_idx]
+            labels_batch = self.labels[batch_idx].reshape(-1, 1) # (batch, 1) to match network output
+
+            # convert to dense only for this batch
+            dense_batch = sparse_to_dense_batch(sparse_batch)
+            yield dense_batch, labels_batch
+
 def get_data(shard_indices: list[int] = None) -> tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
+    # loads data and returns sparse features and normalised labels
     shard_dir = Path(here("data", "nnue_shards"))
     all_shards = sorted(shard_dir.glob("shard_*.npz"))
 
@@ -199,30 +227,29 @@ def get_data(shard_indices: list[int] = None) -> tuple[np.ndarray, np.ndarray, n
     all_features = []
     all_evals = []
 
+    print(f"Loading {len(shards)} shards...")
     for shard_path in shards:
         data = np.load(shard_path)
         all_features.append(data["features"])
         all_evals.append(data["evals"])
 
     # combine all shards
-    features = np.vstack(all_features) # (N, 32) sparse
-    evals = np.concatenate(all_evals) # (N,) centipawns
-
-    # convert sparse to dense
-    X = sparse_to_dense_batch(features)
+    features = np.vstack(all_features) # (N, 32) sparse int16
+    evals = np.concatenate(all_evals) # (N,) int16 centipawns
 
     # normalise evals to [-1.0, 1.0]
     y = np.tanh(evals / 400).astype(np.float32)
 
     # train/test split (90/10)
-    n = len(X)
+    n = len(features)
     split = int(n * 0.9)
     perm = np.random.permutation(n)
 
-    train_X = X[perm[:split]]
+    train_features = features[perm[:split]]
     train_y = y[perm[:split]]
 
-    test_X = X[perm[split:]]
+    test_features = features[perm[split:]]
     test_y = y[perm[split:]]
 
-    return train_X, train_y, test_X, test_y
+    print(f"Loaded {n:,} positions ({split:,} train, {n-split:,} test)")
+    return train_features, train_y, test_features, test_y
