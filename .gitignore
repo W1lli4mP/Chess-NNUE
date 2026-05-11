@@ -2,3 +2,6 @@
 __pycache__/
 *.pgn.zst
 stockfish/
+models/*.npz
+models/*.bin
+results/*.json
