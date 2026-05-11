@@ -1,7 +1,7 @@
 # metadata
-MODEL_NAME = "prototype_1.npz"
-MODEL_RESULTS_NAME = "prototype_1.json"
-MODEL_EXPORT_NAME = "prototype_1.npz"
+MODEL_NAME = "prototype_3.npz"
+MODEL_RESULTS_NAME = "prototype_3.json"
+MODEL_EXPORT_NAME = "prototype_3.npz"
 
 # hyperparameters for the neural network
 LAYER_DIMS = [768, 128, 1]
@@ -23,3 +23,7 @@ EVAL_ENGINE_THREADS = 8
 
 SHARD_SIZE = 100000
 MAX_GAMES = 100000  # set to None for unlimited
+
+# selectable seeds for reproducibility
+DATA_SPLIT_SEED = 33
+TRAINING_SEED = 33

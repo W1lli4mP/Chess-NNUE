@@ -6,7 +6,7 @@ import numpy as np
 from pathlib import Path
 
 from paths import here
-from config import EVAL_ENGINE_DEPTH, EVAL_ENGINE_SKILL_LEVEL, EVAL_ENGINE_THREADS, SHARD_SIZE, MAX_GAMES
+from config import EVAL_ENGINE_DEPTH, EVAL_ENGINE_SKILL_LEVEL, EVAL_ENGINE_THREADS, SHARD_SIZE, MAX_GAMES, DATA_SPLIT_SEED
 
 STOCKFISH_PATH = here("data", "stockfish", "stockfish-windows-x86-64-avx2.exe")
 MAX_PIECES = 32  # maximum pieces on a chess board
@@ -29,6 +29,8 @@ def extract_training_data() -> None:
     
     # resume from existing shards
     shard_dir = Path(here("data", "nnue_shards"))
+    shard_dir.mkdir(parents=True, exist_ok=True) # create the folder beforehand if it does not exist already
+
     existing = list(shard_dir.glob("shard_*.npz"))
     if existing:
         shard_idx = max(int(p.stem.split('_')[1]) for p in existing) + 1
@@ -140,13 +142,25 @@ def get_evaluation_from_board(engine: Stockfish, board: chess.Board) -> int | No
     eval_dict = engine.get_evaluation()
 
     # standardise into centipawns metric
+    #! stockfish returns scores from side-to-move perspective, NOT from white's perspective
     if eval_dict["type"] == "cp":
-        return eval_dict["value"]
+        cp = eval_dict["value"]
+
     elif eval_dict["type"] == "mate":
         # restrict checkmate scores to +-10000 centipawns
-        return 10000 if eval_dict["value"] > 0 else -10000
+        cp = 10000 if eval_dict["value"] > 0 else -10000
     else:
         return None
+
+    # convert side-to-move-relative eval to white-relative eval
+    # AFTER:
+    # positive = good for White
+    # negative = good for Black
+
+    if board.turn == chess.BLACK:
+        cp = -cp
+
+    return cp
     
 def save_shard(total_positions: int = 0) -> None:
     global features_buffer, evals_buffer, shard_idx
@@ -171,13 +185,6 @@ def save_shard(total_positions: int = 0) -> None:
     features_buffer = []
     evals_buffer = []
     shard_idx += 1
-
-# extract_training_data()
-# FINAL STATS:
-# ~ 1 hr
-# 1618957 positions evaluated
-# 100k games processed, 386 games skipped
-# 17 .npz shards created
 
 def sparse_to_dense_batch(sparse_features: np.ndarray) -> np.ndarray:
     # converts (N, 32) sparse indices to (N, 768) dense binary vectors
@@ -238,12 +245,15 @@ def get_data(shard_indices: list[int] = None) -> tuple[np.ndarray, np.ndarray, n
     evals = np.concatenate(all_evals) # (N,) int16 centipawns
 
     # normalise evals to [-1.0, 1.0]
-    y = np.tanh(evals / 400).astype(np.float32)
+    y = np.tanh(evals.astype(np.float32) / 400.0).astype(np.float32)
 
     # train/test split (90/10)
     n = len(features)
     split = int(n * 0.9)
-    perm = np.random.permutation(n)
+
+    # make the split more deterministic
+    rng = np.random.default_rng(DATA_SPLIT_SEED)
+    perm = rng.permutation(n)
 
     train_features = features[perm[:split]]
     train_y = y[perm[:split]]
