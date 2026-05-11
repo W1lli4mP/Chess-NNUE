@@ -1,6 +1,6 @@
 import numpy as np
-from neural_network import NeuralNetwork, loss_function
-from data import DataLoader, sparse_to_dense_batch
+from nnue.neural_network import NeuralNetwork, loss_function
+from nnue.data import DataLoader, sparse_to_dense_batch
 from config import LEARNING_RATE, BATCH_SIZE, HIDDEN_UNITS, EPOCHS, MODEL_NAME, L2_LAMBDA, DROPOUT_RATE, MOMENTUM
 
 def train_epoch(neural_network: NeuralNetwork, train_loader: DataLoader) -> float:

@@ -1,5 +1,5 @@
 import numpy as np
-from neural_network import NeuralNetwork
+from nnue.neural_network import NeuralNetwork
 import json
 import struct
 from paths import here
@@ -62,10 +62,11 @@ def export_model_for_c(neural_network: NeuralNetwork, filename: str) -> None:
         # write header
         # struct.pack() converts python int to 4 raw bytes (int32)
         # i is the format string (4 byte int)
+        # <i for little endian formatting
         # 2nd param is the value
-        f.write(struct.pack("i", len(weights)))
+        f.write(struct.pack("<i", len(weights)))
         for dim in layer_dims:
-            f.write(struct.pack("i", dim))
+            f.write(struct.pack("<i", dim))
 
         # write weights and biases
         for W, b in zip(weights, biases):
